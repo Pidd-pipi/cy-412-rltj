@@ -9,7 +9,7 @@ import (
 func Date(v time.Time) string { return v.Format("2006-01-02 15:04") }
 func Money(v float64) string  { return fmt.Sprintf("¥%.2f", v) }
 func StatusText(v string) string {
-	m := map[string]string{constants.RepairStatusPending: "待受理", constants.RepairStatusAssigned: "已分派", constants.RepairStatusProcessing: "处理中", constants.RepairStatusDone: "已完成", constants.RepairStatusClosed: "已关闭"}
+	m := map[string]string{constants.RepairStatusPending: "待受理", constants.RepairStatusAssigned: "已分派", constants.RepairStatusProcessing: "处理中", constants.RepairStatusDone: "待验收", constants.RepairStatusClosed: "已关闭"}
 	return m[v]
 }
 func RoleText(v string) string {

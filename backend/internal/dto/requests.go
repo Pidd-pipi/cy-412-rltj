@@ -22,7 +22,10 @@ type AssignRepairRequest struct {
 }
 type UpdateRepairStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=pending assigned processing done closed"`
-	Rating int    `json:"rating" validate:"omitempty,min=1,max=5"`
+}
+type EvaluateRepairRequest struct {
+	Rating       int    `json:"rating" validate:"required,min=1,max=5"`
+	ReworkReason string `json:"rework_reason" validate:"max=500"`
 }
 type CreatePaymentRequest struct {
 	UserID  uint    `json:"user_id" validate:"required"`

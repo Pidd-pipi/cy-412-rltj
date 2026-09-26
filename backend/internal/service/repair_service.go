@@ -6,6 +6,7 @@ import (
 	"github.com/smartestate/smartestate/internal/model"
 	"github.com/smartestate/smartestate/internal/repository"
 	"log/slog"
+	"strings"
 )
 
 type RepairService struct {
@@ -37,6 +38,9 @@ func (s *RepairService) Assign(id, handlerID uint, role string) (model.Repair, e
 	if e != nil {
 		return v, e
 	}
+	if v.Status == constants.RepairStatusDone || v.Status == constants.RepairStatusClosed {
+		return v, fmt.Errorf("Repair[id=%d] assign failed: status=%s not assignable, current role=%s", id, v.Status, role)
+	}
 	v.HandlerID = &handlerID
 	v.Handler = nil
 	v.User = model.User{}
@@ -46,20 +50,56 @@ func (s *RepairService) Assign(id, handlerID uint, role string) (model.Repair, e
 	}
 	return s.repo.ByID(id)
 }
-func (s *RepairService) UpdateStatus(id uint, status string, rating int, role string) (model.Repair, error) {
+func (s *RepairService) UpdateStatus(id uint, status string, role string) (model.Repair, error) {
 	if !constants.ValidRepairStatuses[status] {
 		return model.Repair{}, fmt.Errorf("Repair[id=%d] status failed: invalid status, current role=%s", id, role)
+	}
+	if status == constants.RepairStatusClosed {
+		return model.Repair{}, fmt.Errorf("Repair[id=%d] status failed: close requires submitter evaluation, current role=%s", id, role)
 	}
 	v, e := s.repo.ByID(id)
 	if e != nil {
 		return v, e
 	}
-	v.Status = status
-	if rating > 0 {
-		v.Rating = rating
+	if v.Status == status {
+		return v, nil
 	}
+	if !constants.CanTransit(v.Status, status) {
+		return model.Repair{}, fmt.Errorf("Repair[id=%d] status failed: cannot move %s -> %s, current role=%s", id, v.Status, status, role)
+	}
+	v.Status = status
 	if e = s.repo.Update(&v); e != nil {
 		return v, fmt.Errorf("Repair[id=%d] status failed: %w", id, e)
+	}
+	return s.repo.ByID(id)
+}
+func (s *RepairService) Evaluate(id, uid uint, rating int, reason, role string) (model.Repair, error) {
+	v, e := s.repo.ByID(id)
+	if e != nil {
+		return v, e
+	}
+	if v.UserID != uid {
+		return v, fmt.Errorf("Repair[id=%d] evaluate failed: only submitter can evaluate, current role=%s", id, role)
+	}
+	if v.Status != constants.RepairStatusDone {
+		if v.Rating == rating {
+			return v, nil
+		}
+		return v, fmt.Errorf("Repair[id=%d] evaluate failed: status=%s not awaiting acceptance, current role=%s", id, v.Status, role)
+	}
+	v.Rating = rating
+	if rating >= constants.RepairRatingPass {
+		v.Status = constants.RepairStatusClosed
+		v.ReworkReason = ""
+	} else {
+		if strings.TrimSpace(reason) == "" {
+			return v, fmt.Errorf("Repair[id=%d] evaluate failed: rework reason required for rating=%d, current role=%s", id, rating, role)
+		}
+		v.Status = constants.RepairStatusProcessing
+		v.ReworkReason = reason
+	}
+	if e = s.repo.Update(&v); e != nil {
+		return v, fmt.Errorf("Repair[id=%d] evaluate failed: %w", id, e)
 	}
 	return s.repo.ByID(id)
 }

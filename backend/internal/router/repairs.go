@@ -12,4 +12,5 @@ func RegisterRepairs(g *gin.RouterGroup, sv Services, h *handler.Handler) {
 	g.POST("/repairs", middleware.OperationLog(sv.Logs, "repair.create"), x.Create)
 	g.PATCH("/repairs/:id/assign", middleware.RequirePermission(sv.Permissions, "repair:manage"), middleware.OperationLog(sv.Logs, "repair.assign"), x.Assign)
 	g.PATCH("/repairs/:id/status", middleware.RequirePermission(sv.Permissions, "repair:manage"), middleware.OperationLog(sv.Logs, "repair.status"), x.Status)
+	g.POST("/repairs/:id/evaluate", middleware.OperationLog(sv.Logs, "repair.evaluate"), x.Evaluate)
 }

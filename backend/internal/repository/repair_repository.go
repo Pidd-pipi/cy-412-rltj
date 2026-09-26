@@ -28,6 +28,6 @@ func (r *RepairRepository) ByID(id uint) (v model.Repair, e error) {
 func (r *RepairRepository) Update(v *model.Repair) error { return r.DB.Save(v).Error }
 func (r *RepairRepository) CountOpen() (int64, error) {
 	var n int64
-	e := r.DB.Model(&model.Repair{}).Where("status NOT IN ?", []string{"done", "closed"}).Count(&n).Error
+	e := r.DB.Model(&model.Repair{}).Where("status <> ?", "closed").Count(&n).Error
 	return n, e
 }

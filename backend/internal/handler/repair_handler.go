@@ -54,7 +54,20 @@ func (h *RepairHandler) Status(c *gin.Context) {
 		return
 	}
 	id, _ := strconv.Atoi(c.Param("id"))
-	v, e := h.svc.UpdateStatus(uint(id), r.Status, r.Rating, c.GetString("role"))
+	v, e := h.svc.UpdateStatus(uint(id), r.Status, c.GetString("role"))
+	if e != nil {
+		Fail(c, 400, 40001, e.Error())
+		return
+	}
+	OK(c, v)
+}
+func (h *RepairHandler) Evaluate(c *gin.Context) {
+	var r dto.EvaluateRepairRequest
+	if !Bind(c, &r, h.Validate) {
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	v, e := h.svc.Evaluate(uint(id), c.GetUint("userID"), r.Rating, r.ReworkReason, c.GetString("role"))
 	if e != nil {
 		Fail(c, 400, 40001, e.Error())
 		return
