@@ -21,8 +21,14 @@ type AssignRepairRequest struct {
 	HandlerID uint `json:"handler_id" validate:"required"`
 }
 type UpdateRepairStatusRequest struct {
-	Status string `json:"status" validate:"required,oneof=pending assigned processing done closed"`
-	Rating int    `json:"rating" validate:"omitempty,min=1,max=5"`
+	Status string `json:"status" validate:"required,oneof=pending assigned processing acceptance done closed"`
+}
+
+// AcceptRepairRequest 为业主完工验收评价：rating 1-5；
+// 1-3 分（返工）必须携带 rework_reason，4-5 分直接关单。
+type AcceptRepairRequest struct {
+	Rating       int    `json:"rating" validate:"required,min=1,max=5"`
+	ReworkReason string `json:"rework_reason"`
 }
 type CreatePaymentRequest struct {
 	UserID  uint    `json:"user_id" validate:"required"`

@@ -4,5 +4,10 @@ paths:
   /healthz: { get: { summary: Health check } }
   /api/v1/auth/login: { post: { summary: Login } }
   /api/v1/repairs: { get: { summary: List repairs }, post: { summary: Create repair } }
+  /api/v1/repairs/{id}/accept:
+    post:
+      summary: Owner acceptance rating after completion (4-5 closes, 1-3 with rework_reason returns to processing)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
   /api/v1/payments: { get: { summary: List payments }, post: { summary: Create bill } }
   /api/v1/announcements: { get: { summary: List announcements }, post: { summary: Publish announcement } }

@@ -19,7 +19,7 @@ docker compose up -d
 ## 主要功能
 
 - **物业工作台**：汇总待办报修、本月已收费用和近期公告。
-- **报修管理**：业主创建水电/家具/公共设施等报修；物业筛选、分配和更新进度。
+- **报修管理**：业主创建水电/家具/公共设施等报修；物业筛选、分配和更新进度。物业「提交完工」后工单进入**待验收**，关单权在提交人手中：业主评 4~5 分直接关闭，评 1~3 分填写返工原因后退回处理中、原处理人继续跟进。
 - **费用缴纳**：按业主展示账单，通过支付宝沙箱模拟完成支付和记录查询。
 - **社区公告**：置顶、发布、详情查看与阅读计数。
 - **个人中心**：更新昵称、头像 URL，并绑定楼栋、单元和房间。
@@ -70,7 +70,8 @@ cd backend && go build ./...
 | GET | `/users/staff` | 获取处理人员，`repair:manage` |
 | GET/POST | `/repairs` | 工单列表 / 创建工单 |
 | PATCH | `/repairs/:id/assign` | 分配处理人，`repair:manage` |
-| PATCH | `/repairs/:id/status` | 更新进度，`repair:manage` |
+| PATCH | `/repairs/:id/status` | 物业推进进度（已分派→处理中→待验收），`repair:manage`；物业不能直接关单 |
+| POST | `/repairs/:id/accept` | 提交人（业主）完工验收：4~5 分直接关单，1~3 分需带 `rework_reason` 退回处理中 |
 | GET/POST | `/payments` | 账单列表 / 生成账单 |
 | POST | `/payments/:id/pay` | 模拟支付（限流） |
 | GET/POST | `/announcements` | 公告列表 / 发布，发布需 `announcement:publish` |
@@ -115,10 +116,12 @@ OpenAPI 摘要位于 `backend/api/openapi.yaml`。
 
 ### RepairStatus
 
-- 后端定义：`backend/internal/constants/repair.go`；数据库 `Repair.status`；模型 `backend/internal/model/repair.go`。
-- 后端使用：`backend/internal/service/repair_service.go` 状态机、`backend/internal/handler/repair_handler.go` DTO 校验、`backend/internal/constants/log_templates.go`、`backend/internal/util/formatter.go`。
+- 状态值：`pending`（待受理）、`assigned`（已分派）、`processing`（处理中）、`acceptance`（待验收）、`closed`（已关闭）；`done` 为历史值，统一按待验收兼容。
+- 流转：业主提交 → 物业分派/处理 → 物业提交完工进入**待验收** → 提交人验收：4~5 分关闭，1~3 分带返工原因退回处理中。
+- 后端定义：`backend/internal/constants/repair.go`；数据库 `Repair.status`（含 `rework_reason` 字段）；模型 `backend/internal/model/repair.go`。
+- 后端使用：`backend/internal/service/repair_service.go` 状态机与业主验收（`Accept`）、`backend/internal/handler/repair_handler.go` DTO 校验与错误映射、`backend/internal/constants/log_templates.go`、`backend/internal/util/formatter.go`、`backend/internal/dto/requests.go`、`backend/internal/router/repairs.go`。
 - 前端定义：`frontend/src/constants/repair.ts`、`frontend/src/types/index.ts`。
-- 前端使用：`frontend/src/components/common/RepairStatusBadge.vue`、`RepairCard.vue`、`frontend/src/pages/Repairs.vue` 的筛选器、`frontend/src/api/repair.ts`、`frontend/src/hooks/useRepairStats.ts`。
+- 前端使用：`frontend/src/components/common/RepairStatusBadge.vue`、`RepairCard.vue`（验收评分与返工原因）、`frontend/src/pages/Repairs.vue` 的筛选器、`frontend/src/api/repair.ts`、`frontend/src/hooks/useRepairStats.ts`。
 
 ### UserRole
 

@@ -34,6 +34,11 @@ func main() {
 	pr := repository.NewPaymentRepository(db)
 	ar := repository.NewAnnouncementRepository(db)
 	lr := repository.NewOperationLogRepository(db)
+	if n, e := rr.MigrateLegacyDone(); e != nil {
+		log.Printf("legacy done repairs migration failed: %v", e)
+	} else if n > 0 {
+		log.Printf("migrated %d legacy done repairs to acceptance (pending owner verification)", n)
+	}
 	sv := router.Services{Users: service.NewUserService(ur, logger), Repairs: service.NewRepairService(rr, ur, logger), Payments: service.NewPaymentService(pr, logger), Announcements: service.NewAnnouncementService(ar, logger), Permissions: service.NewPermissionService(), Logs: service.NewOperationLogService(lr, logger)}
 	log.Printf("SmartEstate server listening on :%s", cfg.Port)
 	if err = router.New(cfg, sv, logger).Run(":" + cfg.Port); err != nil {

@@ -26,8 +26,17 @@ func (r *RepairRepository) ByID(id uint) (v model.Repair, e error) {
 	return
 }
 func (r *RepairRepository) Update(v *model.Repair) error { return r.DB.Save(v).Error }
+
+// MigrateLegacyDone 把旧版本物业完工即关闭前留下的 done 工单归一成待验收，
+// 让历史数据也走业主验收流程。
+func (r *RepairRepository) MigrateLegacyDone() (int64, error) {
+	res := r.DB.Model(&model.Repair{}).Where("status = ?", "done").Update("status", "acceptance")
+	return res.RowsAffected, res.Error
+}
+
+// CountOpen 统计物业仍需跟进的工单；待验收工单等待业主操作，不计入物业待办。
 func (r *RepairRepository) CountOpen() (int64, error) {
 	var n int64
-	e := r.DB.Model(&model.Repair{}).Where("status NOT IN ?", []string{"done", "closed"}).Count(&n).Error
+	e := r.DB.Model(&model.Repair{}).Where("status IN ?", []string{"pending", "assigned", "processing"}).Count(&n).Error
 	return n, e
 }
